@@ -1045,10 +1045,12 @@
                 "../../src/PostProcess/babylon.anaglyphPostProcess.js",
                 "../../src/PostProcess/babylon.stereoscopicInterlacePostProcess.js",
                 "../../src/Cameras/Inputs/babylon.freeCameraDeviceOrientationInput.js",
+                "../../src/Cameras/Inputs/babylon.freeCameraDeviceOrientationFilteredInput.js",
                 "../../src/Cameras/Inputs/babylon.arcRotateCameraVRDeviceOrientationInput.js",
                 "../../src/Cameras/VR/babylon.vrCameraMetrics.js",
                 "../../src/Cameras/VR/babylon.webVRCamera.js",
                 "../../src/Cameras/babylon.deviceOrientationCamera.js",
+                "../../src/Cameras/babylon.userdeviceOrientationCamera.js",
                 "../../src/Cameras/VR/babylon.vrDeviceOrientationCamera.js",
                 "../../src/Cameras/babylon.stereoscopicCameras.js",
                 "../../src/Cameras/VR/babylon.vrExperienceHelper.js"

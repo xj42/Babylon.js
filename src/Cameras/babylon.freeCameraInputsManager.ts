@@ -22,6 +22,11 @@ module BABYLON {
         addDeviceOrientation(): FreeCameraInputsManager {
             this.add(new FreeCameraDeviceOrientationInput());
             return this;
+		}
+
+		addFilteredDeviceOrientation(): FreeCameraInputsManager {
+            this.add(new FreeCameraDeviceOrientationFilteredInput());
+            return this;
         }
 
         addTouch(): FreeCameraInputsManager {
