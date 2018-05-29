@@ -66,6 +66,38 @@ module BABYLON {
             this._initialQuaternion.normalize();
             //force rotation update
             this._initialQuaternion.multiplyToRef(this.rotationQuaternion, this.rotationQuaternion);
-        }
+		}
+
+		public resetToNewYRotation (dir:number) {
+
+			if (dir === undefined) dir = 0;
+
+			//can only work if this camera has a rotation quaternion already.
+			if (!this.rotationQuaternion) return;
+
+			if (!this._initialQuaternion) {
+				this._initialQuaternion = new BABYLON.Quaternion();
+			}
+
+			this._initialQuaternion.copyFrom(this._quaternionCache || this.rotationQuaternion);
+
+			// Find z+
+			this._initialQuaternion.x = 0;
+			this._initialQuaternion.z = 0;
+			this._initialQuaternion.y *= -1;
+
+			this._initialQuaternion.normalize();
+
+			// rotation from z+
+			var rot = this._initialQuaternion.toEulerAngles()
+			rot.y += dir * Math.PI / 180;
+
+			BABYLON.Quaternion.RotationYawPitchRollToRef(rot.y, rot.x, rot.z, this._initialQuaternion);
+
+			this._initialQuaternion.normalize();
+
+			//force rotation update
+			this._initialQuaternion.multiplyToRef(this.rotationQuaternion, this.rotationQuaternion);
+		}
     }
 }

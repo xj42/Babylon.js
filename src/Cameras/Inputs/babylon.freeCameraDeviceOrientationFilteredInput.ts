@@ -3,79 +3,270 @@ module BABYLON {
      * Takes information about the orientation of the device as reported by the deviceorientation event to orient the camera.
      * Screen rotation is taken into account.
      */
-    export class FreeCameraDeviceOrientationFilteredInput implements ICameraInput<FreeCamera> {
-        private _camera: FreeCamera;
+	// declare var device:any;
+	export class FreeCameraDeviceOrientationFilteredInput implements ICameraInput<UserDeviceOrientationCamera> {
+		private _camera: UserDeviceOrientationCamera;
 
-        private _screenOrientationAngle: number = 0;
+		private _screenOrientationAngle: number = 0;
 
-        private _constantTranform: Quaternion;
-        private _screenQuaternion: Quaternion = new Quaternion();
+		private _constantTranform: Quaternion;
+		private _screenQuaternion: Quaternion = new Quaternion();
 
-        private _alpha: number = 0;
-        private _beta: number = 0;
-        private _gamma: number = 0;
+		private _alpha: number = 0;
+		private _beta: number = 0;
+		private _gamma: number = 0;
+		private _drift: number = 0;
+		private _lastDrift: number = 0;
+		private _threshold = 0;
+		private _rotationRate = 0;
+		// private _timer = 0;
+		private _rotationMatrix = new Array(9);
+		// private _watchGyro = null;
+		// private _sensorOptions = { frequency: 100 };
 
-        constructor() {
-            this._constantTranform = new Quaternion(- Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
-            this._orientationChanged();
-        }
+		constructor(threshold?: number) {
+			// text
 
-        public get camera(): FreeCamera {
-            return this._camera;
-        }
+			if (threshold !== undefined) { this._threshold = threshold; }
 
-        public set camera(camera: FreeCamera) {
-            this._camera = camera;
-            if (this._camera != null && !this._camera.rotationQuaternion) {
-                this._camera.rotationQuaternion = new Quaternion();
-            }
-        }
+			this._constantTranform = new Quaternion(- Math.sqrt(0.5), 0, 0, Math.sqrt(0.5));
+			this._orientationChanged();
+		}
+		/**
+		 *
+		 */
+		public get camera(): UserDeviceOrientationCamera {
+			// text
 
-        attachControl(element: HTMLElement, noPreventDefault?: boolean) {
-            window.addEventListener("orientationchange", this._orientationChanged);
-            window.addEventListener("deviceorientation", this._deviceOrientation);
-            //In certain cases, the attach control is called AFTER orientation was changed,
-            //So this is needed.
-            this._orientationChanged();
-        }
+			return this._camera;
+		}
+		/**
+		 *
+		 */
+		public set camera(camera: UserDeviceOrientationCamera) {
+			// text
 
-        private _orientationChanged = () => {
-            this._screenOrientationAngle = (window.orientation !== undefined ? +window.orientation : (window.screen.orientation && (<any>window.screen.orientation)['angle'] ? (<any>window.screen.orientation).angle : 0));
-            this._screenOrientationAngle = -Tools.ToRadians(this._screenOrientationAngle / 2);
-            this._screenQuaternion.copyFromFloats(0, Math.sin(this._screenOrientationAngle), 0, Math.cos(this._screenOrientationAngle));
-        }
+			this._camera = camera;
+			if (this._camera != null && !this._camera.rotationQuaternion) {
+				this._camera.rotationQuaternion = new Quaternion();
+			}
+		}
+		/**
+		 *
+		 * @param element
+		 * @param noPreventDefault
+		 */
+		attachControl(element: HTMLElement, noPreventDefault?: boolean) {
+			// text
 
-        private _deviceOrientation = (evt: DeviceOrientationEvent) => {
-            this._alpha = evt.alpha !== null ? evt.alpha : 0;
-            this._beta = evt.beta !== null ? evt.beta : 0;
-            this._gamma = evt.gamma !== null ? evt.gamma : 0;
-        }
+			window.addEventListener("orientationchange", this._orientationChanged);
+			window.addEventListener("deviceorientation", this._deviceOrientation);
+			//In certain cases, the attach control is called AFTER orientation was changed,
+			//So this is needed.
 
-        detachControl(element: Nullable<HTMLElement>) {
-            window.removeEventListener("orientationchange", this._orientationChanged);
-            window.removeEventListener("deviceorientation", this._deviceOrientation);
-        }
+			// this._watchGyro = navigator.gyroscope.watch(this._gyroSuccess, this._gyroError, this._sensorOptions);
 
-        public checkInputs() {
-            //if no device orientation provided, don't update the rotation.
-            //Only testing against alpha under the assumption thatnorientation will never be so exact when set.
-            if (!this._alpha) return;
-            Quaternion.RotationYawPitchRollToRef(Tools.ToRadians(this._alpha), Tools.ToRadians(this._beta), -Tools.ToRadians(this._gamma), this.camera.rotationQuaternion)
-            this._camera.rotationQuaternion.multiplyInPlace(this._screenQuaternion);
-            this._camera.rotationQuaternion.multiplyInPlace(this._constantTranform);
-            //Mirror on XY Plane
-            this._camera.rotationQuaternion.z *= -1;
-            this._camera.rotationQuaternion.w *= -1;
-        }
+			// if (device.platform.toLowerCase() == "android") {
 
-        getClassName(): string {
-            return "FreeCameraDeviceOrientationFilteredInput";
-        }
+			// 	// Orientation
+			// 	sensors.enableSensor("ROTATION_VECTOR");
+			// 	var _this = this;
+			// 	this._timer = setInterval(function () {
+			// 		sensors.getState(this._sensorsRaw)
+			// 	}, 50);
+			// }
 
-        getSimpleName() {
-            return "filteredDeviceOrientation";
-        }
-    }
+			this._orientationChanged();
+		}
+		/**
+		 *
+		 * @param gyro
+		 */
+		_gyroSuccess(gyro: any) {
+			// text
 
-    (<any>CameraInputTypes)["FreeCameraDeviceOrientationFilteredInput"] = FreeCameraDeviceOrientationFilteredInput;
+			this._rotationRate = gyro.x !== null ? BABYLON.Tools.ToDegrees(gyro.x) : 0;
+		}
+
+		/**
+		 *
+		 * @param gyro
+		 */
+		_gyroError(gyro: any) {
+			// text
+
+			console.log("ERROR:" + gyro);
+		}
+
+		/**
+		 *
+		 * @param evt
+		 */
+		_sensorsRaw(evt: any) {
+			// text
+
+			var q0;
+			var q1 = evt[0];
+			var q2 = evt[1];
+			var q3 = evt[2];
+			if (evt.length >= 4) {
+				q0 = evt[3];
+			} else {
+				q0 = 1 - q1 * q1 - q2 * q2 - q3 * q3;
+				q0 = (q0 > 0) ? Math.sqrt(q0) : 0;
+			}
+
+			var sq_q1 = 2 * q1 * q1;
+			var sq_q2 = 2 * q2 * q2;
+			var sq_q3 = 2 * q3 * q3;
+			var q1_q2 = 2 * q1 * q2;
+			var q3_q0 = 2 * q3 * q0;
+			var q1_q3 = 2 * q1 * q3;
+			var q2_q0 = 2 * q2 * q0;
+			var q2_q3 = 2 * q2 * q3;
+			var q1_q0 = 2 * q1 * q0;
+
+			this._rotationMatrix[0] = 1 - sq_q2 - sq_q3;
+			this._rotationMatrix[1] = q1_q2 - q3_q0;
+			this._rotationMatrix[2] = q1_q3 + q2_q0;
+			this._rotationMatrix[3] = q1_q2 + q3_q0;
+			this._rotationMatrix[4] = 1 - sq_q1 - sq_q3;
+			this._rotationMatrix[5] = q2_q3 - q1_q0;
+			this._rotationMatrix[6] = q1_q3 - q2_q0;
+			this._rotationMatrix[7] = q2_q3 + q1_q0;
+			this._rotationMatrix[8] = 1 - sq_q1 - sq_q2;
+
+			// Orientation (yaw, pitch, roll from matrix)
+			/*
+			 * 3x3 (length=9) :
+			 *   /  R[ 0]   R[ 1]   R[ 2]  \
+			 *   |  R[ 3]   R[ 4]   R[ 5]  |
+			 *   \  R[ 6]   R[ 7]   R[ 8]  /
+			 *
+			 */
+
+			var values = new Array(3);
+			values[0] = Math.atan2(this._rotationMatrix[1], this._rotationMatrix[4]);
+			values[1] = Math.asin(-this._rotationMatrix[7]);
+			values[2] = Math.atan2(-this._rotationMatrix[6], this._rotationMatrix[8]);
+
+			this._calculate(-BABYLON.Tools.ToDegrees(values[0]), -BABYLON.Tools.ToDegrees(values[1]), BABYLON.Tools.ToDegrees(values[2]));
+		}
+
+		/**
+		 *
+		 * @param Q
+		 * @param rv
+		 */
+		getQuaternionFromVector(Q: any, rv: any) {
+			// text
+
+			if (rv.length >= 4) {
+				Q[0] = rv[3];
+			} else {
+				Q[0] = 1 - rv[0] * rv[0] - rv[1] * rv[1] - rv[2] * rv[2];
+				Q[0] = (Q[0] > 0) ? Math.sqrt(Q[0]) : 0;
+			}
+			Q[1] = rv[0];
+			Q[2] = rv[1];
+			Q[3] = rv[2];
+		}
+
+		private _calculate = (alpha: any, beta: any, gamma: any) => {
+			// text
+			this._beta = beta !== null ? beta : 0;
+			this._gamma = gamma !== null ? gamma : 0;
+
+			if (this._rotationRate && this._rotationRate !== 0) {
+				if (Math.abs(this._rotationRate) < this._threshold) {
+					// drift is the difference between the sensor input and the camera position
+					this._drift = ((alpha !== null ? alpha : 0) - this._alpha);
+				}
+			}
+
+			// // make sure the drift compensation is not convused by beta flip
+			if (Math.abs(this._lastDrift - this._drift) > 160 &&
+				Math.abs(this._lastDrift - this._drift) < 270) {
+				this._drift += 180;
+			}
+
+			// normalise to compass
+			this._alpha = (((alpha !== null ? alpha : 0) - this._drift) + 360) % 360;
+			this._lastDrift = this._drift;
+		}
+
+		/**
+		 *
+		 */
+		private _orientationChanged = () => {
+			// this._screenOrientationAngle = (window.orientation !== undefined ? +window.orientation : (window.screen.orientation && (<any>window.screen.orientation)['angle'] ? (<any>window.screen.orientation).angle : 0));
+			// this._screenOrientationAngle = -Tools.ToRadians(this._screenOrientationAngle / 2);
+			// this._screenQuaternion.copyFromFloats(0, Math.sin(this._screenOrientationAngle), 0, Math.cos(this._screenOrientationAngle));
+			this._screenQuaternion.copyFromFloats(0, -0.707, 0, 0.707);
+
+		}
+
+		/**
+		 *
+		 */
+		private _deviceOrientation = (evt: DeviceOrientationEvent) => {
+			this._alpha = evt.alpha !== null ? evt.alpha : 0;
+			this._beta = evt.beta !== null ? evt.beta : 0;
+			this._gamma = evt.gamma !== null ? evt.gamma : 0;
+			this._calculate(this._alpha, this._beta, this._gamma);
+		}
+
+		/**
+		 *
+		 * @param element
+		 */
+		detachControl(element: Nullable<HTMLElement>) {
+			// navigator.gyroscope.clearWatch(this._watchGyro);
+
+			// if (device.platform.toLowerCase() == "android") {
+
+			// 	// clear timer
+			// 	clearInterval(this._timer);
+
+			// 	// stop sensor
+			// 	sensors.disableSensor("GAME_ROTATION_VECTOR");
+			// 	// stop fusion sensors
+			// 	// navigator.fusion.clearWatch(this._watchFusion);
+			// 	// 	this._watchFusion = null;
+			// }
+			window.removeEventListener("orientationchange", this._orientationChanged);
+			window.removeEventListener("deviceorientation", this._deviceOrientation);
+		}
+
+		/**
+		 *
+		 */
+		public checkInputs() {
+			//if no device orientation provided, don't update the rotation.
+			//Only testing against alpha under the assumption thatnorientation will never be so exact when set.
+			if (!this._alpha) return;
+			Quaternion.RotationYawPitchRollToRef(Tools.ToRadians(this._alpha), Tools.ToRadians(this._beta), -Tools.ToRadians(this._gamma), this.camera.rotationQuaternion)
+			this._camera.rotationQuaternion.multiplyInPlace(this._screenQuaternion);
+			this._camera.rotationQuaternion.multiplyInPlace(this._constantTranform);
+			//Mirror on XY Plane
+			this._camera.rotationQuaternion.z *= -1;
+			this._camera.rotationQuaternion.w *= -1;
+		}
+
+		/**
+		 *
+		 */
+		getClassName(): string {
+			return "FreeCameraDeviceOrientationFilteredInput";
+		}
+
+		/**
+		 *
+		 */
+		getSimpleName() {
+			return "filteredDeviceOrientation";
+		}
+	}
+
+	(<any>CameraInputTypes)["FreeCameraDeviceOrientationFilteredInput"] = FreeCameraDeviceOrientationFilteredInput;
 }
